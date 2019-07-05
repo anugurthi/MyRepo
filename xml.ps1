@@ -79,12 +79,14 @@ $employers = $XMLDocument.config.Employers
 
 
 
-if ($employers | Where-Object {$empr.Name -like $Employer}) 
-{
+#if ($employers | Where-Object {$empr.Name -like $Employer}) 
+#{
+#    throw 'Please Register Employer fisrt'
+#}
+
+if(!$employers.contains($Employer)){
     throw 'Please Register Employer fisrt'
 }
-
-
 
 }
 function CheckEmployerExists($Employer){
@@ -193,3 +195,4 @@ Write-Host $Values
 
 
 }
+
