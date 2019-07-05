@@ -5,6 +5,33 @@ if(![System.IO.File]::Exists($xmlFilePath)){
 }
 $doc = [xml](Get-Content -Path $xmlFilePath)
 
+function AddMainTag(){
+
+if(!$doc){
+
+# Create a new XML File with config root node
+[System.XML.XMLDocument]$oXMLDocument=New-Object System.XML.XMLDocument
+
+# New Node
+[System.XML.XMLElement]$oXMLRoot=$oXMLDocument.CreateElement("config")
+
+# Append as child to an existing node
+$oXMLDocument.appendChild($oXMLRoot)
+
+# Add a Attribute
+$oXMLRoot.SetAttribute("description","Config file for testing")
+
+[System.XML.XMLElement]$oXMLSystem=$oXMLRoot.appendChild($oXMLDocument.CreateElement("Employees"))
+$oXMLSystem.SetAttribute("description","Employee information")
+
+
+[System.XML.XMLElement]$oXMLSyste=$oXMLRoot.appendChild($oXMLDocument.CreateElement("Employers"))
+$oXMLSyste.SetAttribute("description","Employer information")
+
+# Save File
+$oXMLDocument.Save($xmlFilePath)
+}
+}
 
 $addMainTag = AddMainTag
 
@@ -12,8 +39,8 @@ $userInput = Read-Host -Prompt 'Enter Employee for Employee or Employer for Empl
 
 if($userInput -eq 'Employee')
 {
-    $childNodeInput = Read-Host -Prompt 'Type Add to Adding , Del to delete , Modify to Update'
-    AddEmployeeChild
+    $childNodeInput = Read-Host -Prompt 'Type Add to Adding , Del to delete , Modify to Update , GetList to GetEmployees List'
+    checkTheUserInputAndPerformForEmployeeNode -childNodeInput $childNodeInput
 
 }
 elseif($userInput -eq 'Employer') 
@@ -31,12 +58,14 @@ Write-Host $childNodeInput
 }
 elseif($childNodeInput -eq 'Del'){
 Write-Host $childNodeInput
+DelEmployeeChild
 }
 elseif($childNodeInput -eq 'Modify'){
 Write-Host $childNodeInput
 }
-elseif($childNodeInput -eq 'GetEmp'){
+elseif($childNodeInput -eq 'GetList'){
 Write-Host $childNodeInput
+GetEmployees
 }
 else{
 Write-Warning 'Invalid Input'
@@ -44,28 +73,29 @@ Write-Warning 'Invalid Input'
 }
 
 function CheckEmployerBeforeAddingEmployee($Employer){
-$XMLDocument=New-Object System.XML.XMLDocument  
+$XMLDocument=New-Object System.XML.XMLDocument
 $XMLDocument.Load($xmlFilePath)
 $employers = $XMLDocument.config.Employers
 
-foreach ($empr in $employers)
+
+
+if ($employers | Where-Object {$empr.Name -like $Employer}) 
 {
-if($empr -ne $Employer){
- throw 'Please Register Employer fisrt'
+    throw 'Please Register Employer fisrt'
 }
-}
+
+
+
 }
 function CheckEmployerExists($Employer){
 $XMLDocument=New-Object System.XML.XMLDocument  
 $XMLDocument.Load($xmlFilePath)
 $employers = $XMLDocument.config.Employers.employer
 
-foreach ($empr in $employers)
+
+if ($employers | Where-Object {$empr.Name -like $Employer}) 
 {
-Write-Host $empr.Name
-if($empr.Name -eq $Employer){
- throw 'Employer already Exists..'
-}
+    throw 'Please Register Employer fisrt'
 }
 }
 
@@ -114,21 +144,16 @@ $xmlDoc.Save($fileName);
 function DelEmployeeChild()
 {
 $Name = Read-Host -Prompt 'Enter Name '
-$Employer = Read-Host -Prompt 'Enter Employer '
-$Age = Read-Host -Prompt 'Enter Age '
-$Designation = Read-Host -Prompt 'Enter Designation '
+$EmployerName = Read-Host -Prompt 'Enter Employer '
 
 $fileName = $xmlFilePath;
 $xmlDoc = [System.Xml.XmlDocument](Get-Content $fileName);
 
-$newXmlEmployee = $xmlDoc.config.Employees.AppendChild($xmlDoc.CreateElement("employee"));
+$RemoveEmp = $xmlDoc.config.Employees.employee | Where-Object {$_.Name -eq $Name -and $_.Employer -eq $EmployerName}
 
-CreateNode -key "Name" -value $Name
-CreateNode -key "Employer" -value $Employer
-CreateNode -key "Age" -value $Age
-CreateNode -key "Designation" -value $Designation
-
+$xmlDoc.config.Employees.RemoveChild($RemoveEmp)
 $xmlDoc.Save($fileName);
+
 }
 
 function AddEmployerChild($name,$employer,$age,$address)
@@ -151,35 +176,20 @@ CreateNode -key "GST_ID" -value $GST_ID
 
 $xmlDoc.Save($fileName);
 }
-function AddMainTag(){
 
-if(!$doc){
-
-# Create a new XML File with config root node
-[System.XML.XMLDocument]$oXMLDocument=New-Object System.XML.XMLDocument
-
-# New Node
-[System.XML.XMLElement]$oXMLRoot=$oXMLDocument.CreateElement("config")
-
-# Append as child to an existing node
-$oXMLDocument.appendChild($oXMLRoot)
-
-# Add a Attribute
-$oXMLRoot.SetAttribute("description","Config file for testing")
-
-[System.XML.XMLElement]$oXMLSystem=$oXMLRoot.appendChild($oXMLDocument.CreateElement("Employees"))
-$oXMLSystem.SetAttribute("description","Employee information")
-
-
-[System.XML.XMLElement]$oXMLSyste=$oXMLRoot.appendChild($oXMLDocument.CreateElement("Employers"))
-$oXMLSyste.SetAttribute("description","Employer information")
-
-# Save File
-$oXMLDocument.Save($xmlFilePath)
-}
-}
 
 function CreateNode($key,$value){
 $newXmlNameElement = $newXmlEmployee.AppendChild($xmlDoc.CreateElement($key));
 $newXmlNameTextNode = $newXmlNameElement.AppendChild($xmlDoc.CreateTextNode($value));
+}
+
+function GetEmployees(){
+$EmployerName = Read-Host -Prompt 'Enter the Employer to see Employees list'
+
+
+$Values = $xmlFilePath | Select-XML -XPath '//config[/employee/Employer/text()=$EmployerName]'
+
+Write-Host $Values
+
+
 }
